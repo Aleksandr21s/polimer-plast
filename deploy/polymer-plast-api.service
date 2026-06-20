@@ -1,0 +1,16 @@
+[Unit]
+Description=Polymer-Plast API (Express)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/polymer-plast/backend
+ExecStart=/usr/bin/node src/server.js
+Restart=always
+RestartSec=3
+User=root
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

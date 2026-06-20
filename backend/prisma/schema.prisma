@@ -1,0 +1,361 @@
+// Prisma schema — B2B-приложение ООО ТПК «Полимер-Пласт»
+// СУБД: PostgreSQL. Документирует структуру БД для ВКР.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Пользователи и компании
+// ─────────────────────────────────────────────────────────────
+
+enum OrgForm {
+  OOO // Общество с ограниченной ответственностью
+  IP  // Индивидуальный предприниматель
+}
+
+enum Role {
+  CLIENT  // сотрудник компании-клиента
+  MANAGER // менеджер ООО ТПК «Полимер-Пласт»
+}
+
+/// Компания-клиент. Создаётся отдельно от пользователя; пользователь относится к компании.
+model Company {
+  id           Int       @id @default(autoincrement())
+  name         String // Наименование организации
+  orgForm      OrgForm   @default(OOO) // формат организации ООО/ИП
+  inn          String?   @unique // ИНН
+  kpp          String? // КПП
+  ogrn         String? // ОГРН
+  legalAddress String? // Юридический адрес
+  // Банковские реквизиты покупателя (для КП/счёта)
+  bankName     String?
+  bankBik      String?
+  bankAccount  String?
+  corrAccount  String?
+  // Кэш текущей скидки по программе лояльности (пересчитывается)
+  discountPercent Decimal @default(0) @db.Decimal(5, 2)
+
+  users    User[]
+  orders   Order[]
+  samples  SampleRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+/// Пользователь приложения. Принадлежит компании.
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String
+  firstName    String // Имя
+  lastName     String // Фамилия
+  middleName   String? // Отчество
+  position     String? // Должность
+  phone        String?
+  role         Role     @default(CLIENT)
+
+  companyId Int?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  createdOrders   Order[]              @relation("OrderCreator")
+  statusChanges   OrderStatusHistory[]
+  uploadedDocs    OrderDocument[]
+  sampleRequests  SampleRequest[]
+  chatMessages    ChatMessage[]
+  complaints      Complaint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Каталог продукции
+// ─────────────────────────────────────────────────────────────
+
+/// Раздел каталога (поддержка иерархии уровней).
+model Category {
+  id       Int        @id @default(autoincrement())
+  name     String
+  slug     String     @unique
+  parentId Int?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+  products Product[]
+}
+
+/// Метка применения сырья (например: Обувь, Кабельная изоляция, Медицина).
+model ApplicationTag {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  slug     String    @unique
+  color    String    @default("#1f6feb") // цвет чипа в UI
+  icon     String? // имя иконки
+  products Product[] @relation("ProductTags")
+}
+
+/// Марка пластиката (товар каталога).
+model Product {
+  id           Int      @id @default(autoincrement())
+  externalCode String?  @unique // внешний код из учётной системы
+  name         String
+  slug         String   @unique
+  description  String?
+  unit         String   @default("тонна")
+  isActive     Boolean  @default(true)
+
+  // Технические характеристики пластиката (карточка продукции)
+  colorName       String? // цвет (словесно)
+  colorRal        String? // цвет по RAL
+  colorHex        String? // hex для отображения образца цвета
+  shoreHardnessA  Int? // твёрдость по Шору, шкала А
+  brittlenessTemp Int? // температура хрупкости, °C
+  meltFlowIndex   Decimal? @db.Decimal(6, 2) // ПТР (показатель текучести расплава), г/10 мин
+  density         Decimal? @db.Decimal(5, 3) // плотность, г/см³
+
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id])
+
+  tags    ApplicationTag[] @relation("ProductTags")
+  prices  Price[]
+  orderItems OrderItem[]
+  sampleRequests SampleRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Цены (обновляются раз в 2 недели — отдельная таблица)
+// ─────────────────────────────────────────────────────────────
+
+/// Партия обновления цен (одна процедура загрузки нового прайс-листа).
+model PriceUpdate {
+  id          Int      @id @default(autoincrement())
+  comment     String?
+  effectiveAt DateTime @default(now())
+  createdById Int?
+  prices      Price[]
+  createdAt   DateTime @default(now())
+}
+
+/// Цена марки на момент действия прайс-листа. Текущая = с максимальным effectiveFrom.
+model Price {
+  id            Int      @id @default(autoincrement())
+  productId     Int
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  pricePerTon   Decimal  @db.Decimal(12, 2) // цена за тонну
+  currency      String   @default("RUB")
+  vatRate       Int      @default(22) // ставка НДС, %
+  vatIncluded   Boolean  @default(true)
+  effectiveFrom DateTime @default(now())
+  isCurrent     Boolean  @default(true)
+
+  priceUpdateId Int?
+  priceUpdate   PriceUpdate? @relation(fields: [priceUpdateId], references: [id])
+
+  @@index([productId, isCurrent])
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Заказы (коммерческое предложение / счёт)
+// ─────────────────────────────────────────────────────────────
+
+enum OrderStatus {
+  NEW            // заявка сформирована клиентом
+  INVOICE_ISSUED // сформирован КП/счёт, идёт окно 72ч на оплату/подтверждение
+  PAID           // оплата подтверждена
+  SHIPPED        // отгружен / в доставке
+  DELIVERED      // доставлен
+  COMPLETED      // завершён (учитывается в лояльности)
+  CANCELLED      // отменён (вручную или авто после 72ч)
+}
+
+model Order {
+  id        Int         @id @default(autoincrement())
+  number    String      @unique // человекочитаемый номер
+  status    OrderStatus @default(NEW)
+
+  companyId Int
+  company   Company @relation(fields: [companyId], references: [id])
+  createdById Int
+  createdBy   User  @relation("OrderCreator", fields: [createdById], references: [id])
+
+  // Доставка
+  deliveryRegion String
+  deliveryCity   String?
+  comment        String?
+
+  // Денежные итоги (снимок на момент формирования КП)
+  totalWeightKg   Decimal @default(0) @db.Decimal(12, 2)
+  subtotal        Decimal @default(0) @db.Decimal(14, 2) // сумма без скидки, без НДС
+  discountPercent Decimal @default(0) @db.Decimal(5, 2)
+  discountAmount  Decimal @default(0) @db.Decimal(14, 2)
+  vatRate         Int     @default(22)
+  vatAmount       Decimal @default(0) @db.Decimal(14, 2)
+  total           Decimal @default(0) @db.Decimal(14, 2) // итого с НДС и скидкой
+
+  // 72-часовое окно
+  invoiceIssuedAt DateTime?
+  autoCancelAt    DateTime?
+  paidAt          DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+
+  items     OrderItem[]
+  documents OrderDocument[]
+  history   OrderStatusHistory[]
+  complaints Complaint[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+
+  weightKg          Decimal @db.Decimal(12, 2) // сколько кг требуется
+  pricePerTon       Decimal @db.Decimal(12, 2) // снимок цены
+  lineTotal         Decimal @db.Decimal(14, 2) // weightKg/1000 * pricePerTon
+}
+
+enum DocumentType {
+  COMMERCIAL_OFFER  // КП/счёт (генерируется системой)
+  TRANSPORT_INVOICE // счёт от транспортной компании (загружает МЕНЕДЖЕР)
+  PAYMENT_GOODS     // платёжка за товар (загружает КЛИЕНТ)
+  PAYMENT_DELIVERY  // платёжка за доставку (загружает КЛИЕНТ)
+  OTHER
+}
+
+model OrderDocument {
+  id        Int          @id @default(autoincrement())
+  orderId   Int
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type      DocumentType
+  fileName  String
+  filePath  String
+  mimeType  String?
+  sizeBytes Int?
+
+  uploadedById Int?
+  uploadedBy   User? @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+model OrderStatusHistory {
+  id        Int         @id @default(autoincrement())
+  orderId   Int
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  comment   String?
+  changedById Int?
+  changedBy   User? @relation(fields: [changedById], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Бесплатные образцы
+// ─────────────────────────────────────────────────────────────
+
+enum SampleStatus {
+  NEW
+  APPROVED
+  SHIPPED
+  REJECTED
+}
+
+model SampleRequest {
+  id        Int          @id @default(autoincrement())
+  productId Int
+  product   Product      @relation(fields: [productId], references: [id])
+  userId    Int
+  user      User         @relation(fields: [userId], references: [id])
+  companyId Int?
+  company   Company?     @relation(fields: [companyId], references: [id])
+  weightKg  Int // 5 / 10 / 20 / 30
+  region    String
+  city      String?
+  comment   String?
+  status    SampleStatus @default(NEW)
+  createdAt DateTime     @default(now())
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Лояльность, рекламации, каталог-файл, чат-бот
+// ─────────────────────────────────────────────────────────────
+
+/// Порог программы лояльности (тонн за 2 года → скидка %).
+model LoyaltyTier {
+  id            Int     @id @default(autoincrement())
+  minTons       Int // от скольких тонн
+  discountPercent Decimal @db.Decimal(5, 2)
+}
+
+enum ComplaintStatus {
+  NEW
+  IN_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+/// Рекламация по заказу (передаётся менеджеру).
+model Complaint {
+  id        Int             @id @default(autoincrement())
+  orderId   Int?
+  order     Order?          @relation(fields: [orderId], references: [id])
+  userId    Int
+  user      User            @relation(fields: [userId], references: [id])
+  subject   String
+  text      String
+  status    ComplaintStatus @default(NEW)
+  createdAt DateTime        @default(now())
+}
+
+/// Файл полного каталога продукции (docx/pdf) для просмотра/скачивания.
+model CatalogFile {
+  id        Int      @id @default(autoincrement())
+  title     String
+  fileName  String
+  filePath  String
+  version   String?
+  isCurrent Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum ChatRole {
+  USER
+  BOT
+  MANAGER
+}
+
+/// Сообщение чат-бота (с возможностью эскалации менеджеру).
+model ChatMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  sessionId String // группировка диалога
+  role      ChatRole
+  text      String
+  escalated Boolean  @default(false)
+  meta      Json? // рекомендованные марки и т.п.
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+}

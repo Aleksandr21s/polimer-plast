@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ER-диаграмма БД — Полимер-Пласт</title>
+<style>
+  body { font-family: "Times New Roman", serif; background: #ffffff; color: #111; margin: 24px; }
+  h1 { font-size: 22px; text-align: center; margin: 0 0 4px; }
+  p.sub { text-align: center; margin: 0 0 20px; font-size: 15px; color: #444; }
+  .diagram { overflow-x: auto; }
+  .legend { margin-top: 18px; font-size: 14px; color: #333; }
+  .legend code { font-family: Consolas, monospace; background: #f2f2f2; padding: 1px 5px; border-radius: 3px; }
+  @media print { body { margin: 0; } }
+</style>
+</head>
+<body>
+  <h1>Логическая модель базы данных (ER-диаграмма)</h1>
+  <p class="sub">Мобильное B2B-приложение ООО ТПК «Полимер-Пласт» · СУБД PostgreSQL 17 · ORM Prisma</p>
+
+  <div class="diagram">
+  <pre class="mermaid">
+erDiagram
+  Company ||--o{ User : "сотрудники"
+  Company ||--o{ Order : "заказы"
+  Company ||--o{ SampleRequest : "образцы"
+
+  User ||--o{ Order : "оформляет"
+  User ||--o{ OrderStatusHistory : "меняет статус"
+  User ||--o{ OrderDocument : "загружает"
+  User ||--o{ SampleRequest : "подаёт"
+  User ||--o{ ChatMessage : "пишет"
+  User ||--o{ Complaint : "подаёт"
+
+  Category ||--o{ Category : "подраздел"
+  Category ||--o{ Product : "содержит"
+  Product }o--o{ ApplicationTag : "метки"
+  Product ||--o{ Price : "цены"
+  Product ||--o{ OrderItem : "в позициях"
+  Product ||--o{ SampleRequest : "товар образца"
+
+  PriceUpdate ||--o{ Price : "партия цен"
+
+  Order ||--o{ OrderItem : "позиции"
+  Order ||--o{ OrderDocument : "документы"
+  Order ||--o{ OrderStatusHistory : "история"
+  Order ||--o{ Complaint : "рекламации"
+
+  Company {
+    int id PK
+    string name
+    enum orgForm
+    string inn UK
+    string kpp
+    string ogrn
+    decimal discountPercent
+  }
+  User {
+    int id PK
+    string email UK
+    string passwordHash
+    string firstName
+    string lastName
+    enum role
+    int companyId FK
+  }
+  Category {
+    int id PK
+    string name
+    string slug UK
+    int parentId FK
+  }
+  ApplicationTag {
+    int id PK
+    string name UK
+    string slug UK
+    string color
+  }
+  Product {
+    int id PK
+    string externalCode UK
+    string name
+    string slug UK
+    int shoreHardnessA
+    int brittlenessTemp
+    decimal meltFlowIndex
+    decimal density
+    int categoryId FK
+  }
+  PriceUpdate {
+    int id PK
+    string comment
+    datetime effectiveAt
+    int createdById
+  }
+  Price {
+    int id PK
+    int productId FK
+    decimal pricePerTon
+    int vatRate
+    boolean isCurrent
+    int priceUpdateId FK
+  }
+  Order {
+    int id PK
+    string number UK
+    enum status
+    int companyId FK
+    int createdById FK
+    string deliveryRegion
+    decimal total
+    datetime autoCancelAt
+  }
+  OrderItem {
+    int id PK
+    int orderId FK
+    int productId FK
+    decimal weightKg
+    decimal pricePerTon
+    decimal lineTotal
+  }
+  OrderDocument {
+    int id PK
+    int orderId FK
+    enum type
+    string fileName
+    int uploadedById FK
+  }
+  OrderStatusHistory {
+    int id PK
+    int orderId FK
+    enum status
+    int changedById FK
+    datetime createdAt
+  }
+  SampleRequest {
+    int id PK
+    int productId FK
+    int userId FK
+    int companyId FK
+    int weightKg
+    enum status
+  }
+  LoyaltyTier {
+    int id PK
+    int minTons
+    decimal discountPercent
+  }
+  Complaint {
+    int id PK
+    int orderId FK
+    int userId FK
+    string subject
+    enum status
+  }
+  CatalogFile {
+    int id PK
+    string title
+    string fileName
+    boolean isCurrent
+  }
+  ChatMessage {
+    int id PK
+    int userId FK
+    string sessionId
+    enum role
+    boolean escalated
+  }
+  </pre>
+  </div>
+
+  <div class="legend">
+    <b>Обозначения:</b> <code>PK</code> — первичный ключ, <code>FK</code> — внешний ключ, <code>UK</code> — уникальное поле.
+    Линия <code>||—o&lt;</code> означает связь «один-ко-многим», <code>&gt;o—o&lt;</code> — «многие-ко-многим».
+    Таблицы <code>LoyaltyTier</code> и <code>CatalogFile</code> — справочные, без внешних связей.
+  </div>
+
+  <script src="./mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "neutral",
+      er: { useMaxWidth: false, entityPadding: 10, fontSize: 13 },
+    });
+  </script>
+</body>
+</html>

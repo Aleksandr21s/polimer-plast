@@ -1,0 +1,18 @@
+# Зависимости
+node_modules/
+
+# Окружение
+backend/.env
+
+# Загруженные файлы и сгенерированные документы
+backend/uploads/**/*
+!backend/uploads/**/.gitkeep
+
+# Сборки Expo
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+
+# Логи
+*.log
+.DS_Store

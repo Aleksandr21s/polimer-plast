@@ -1,0 +1,16 @@
+# /etc/caddy/Caddyfile
+# Раздаёт собранный фронтенд и проксирует API на бэкенд.
+# HTTPS-сертификаты Caddy получает и продлевает автоматически (Let's Encrypt),
+# поэтому в DNS должны быть A-записи на этот сервер (корень, www, api).
+
+b2b-polimer-plast.ru, www.b2b-polimer-plast.ru {
+	encode gzip
+	root * /opt/polymer-plast/mobile/dist
+	try_files {path} /index.html
+	file_server
+}
+
+api.b2b-polimer-plast.ru {
+	encode gzip
+	reverse_proxy localhost:4000
+}
