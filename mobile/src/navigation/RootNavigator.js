@@ -80,7 +80,7 @@ function ManagerChatStack() {
   );
 }
 
-const tabIcon = (name) => ({ color, size }) => <Ionicons name={name} size={size} color={color} />;
+const tabIcon = (name) => ({ color }) => <Ionicons name={name} size={21} color={color} />;
 
 // Высоту и нижний отступ таб-бара увеличиваем на нижнюю безопасную зону
 // (home indicator на iPhone / системная панель) — иначе подписи обрезаются снизу.
@@ -90,8 +90,8 @@ const tabBarOpts = (hide, insets) => {
     headerShown: false,
     tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,
-    tabBarStyle: hide ? { display: 'none' } : { height: 60 + bottom, paddingBottom: 8 + bottom, paddingTop: 6 },
-    tabBarLabelStyle: { fontSize: 11 },
+    tabBarStyle: hide ? { display: 'none' } : { height: 76 + bottom, paddingBottom: 12 + bottom, paddingTop: 8 },
+    tabBarLabelStyle: { fontSize: 11, lineHeight: 14, marginTop: 0 },
   };
 };
 
@@ -123,7 +123,7 @@ function ClientTabs({ hideTabBar }) {
       <Tab.Screen name="Каталог" component={CatalogStack} options={{ tabBarIcon: tabIcon('grid-outline') }} />
       <Tab.Screen name="Корзина" component={CartStack} options={{ tabBarIcon: tabIcon('cart-outline'), tabBarBadge: count || undefined }} />
       <Tab.Screen name="Заказы" component={OrdersStack} options={{ tabBarIcon: tabIcon('cube-outline') }} />
-      <Tab.Screen name="Помощник" component={ChatScreen} options={{ tabBarIcon: tabIcon('chatbubbles-outline'), headerShown: true, header: renderAppHeader, title: 'Помощник по подбору' }} />
+      <Tab.Screen name="Помощник" component={ChatScreen} options={{ tabBarIcon: tabIcon('chatbubbles-outline'), tabBarLabel: 'Помощник', headerShown: true, header: renderAppHeader, title: 'Помощник по подбору' }} />
       <Tab.Screen name="Профиль" component={ProfileScreen} options={{ tabBarIcon: tabIcon('person-outline'), headerShown: true, header: renderAppHeader }} />
     </Tab.Navigator>
   );
