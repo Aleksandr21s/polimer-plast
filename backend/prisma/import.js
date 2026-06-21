@@ -60,7 +60,19 @@ async function importProducts({ categoryId, tagBySlug }) {
 
     await prisma.product.upsert({
       where: { slug },
-      update: {},
+      // Идемпотентность: при повторном импорте обновляем характеристики и метки
+      // (цены не трогаем, чтобы не плодить строки прайса).
+      update: {
+        name,
+        colorName: meta.colorName,
+        colorRal: meta.colorRal,
+        colorHex: meta.colorHex,
+        shoreHardnessA: meta.shoreHardnessA,
+        brittlenessTemp: meta.brittlenessTemp,
+        meltFlowIndex: meta.meltFlowIndex,
+        density: meta.density,
+        tags: { set: meta.tags.map((s) => ({ id: tagBySlug[s] })).filter((x) => x.id) },
+      },
       create: {
         externalCode: extId || null,
         name,

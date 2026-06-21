@@ -11,6 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "db:import": "node prisma/import.js",
+    "db:retag": "node prisma/retag.js",
     "db:seed": "node prisma/seed.js",
     "db:catalog": "node prisma/generateCatalog.js",
     "db:setup": "node prisma/import.js && node prisma/seed.js && node prisma/generateCatalog.js",

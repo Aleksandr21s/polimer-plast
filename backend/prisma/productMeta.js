@@ -15,6 +15,8 @@ export const APPLICATION_TAGS = [
   { slug: 'acid-alkali', name: 'Кислото-щёлочестойкое (КЩС)', color: '#6e7781' },
   { slug: 'transparent', name: 'Прозрачные изделия', color: '#9a6700' },
   { slug: 'injection', name: 'Литьё под давлением', color: '#8250df' },
+  { slug: 'stretch-ceiling', name: 'Натяжные потолки', color: '#7b61ff' },
+  { slug: 'food-grade', name: 'Пищевой пластикат', color: '#2a9d4a' },
   { slug: 'general', name: 'Общего назначения', color: '#57606a' },
 ];
 
@@ -88,41 +90,76 @@ export function deriveMeta(name) {
   }
   if (ralMatch && !colorRal) colorRal = 'RAL ' + ralMatch[1];
 
-  // ── Применение / метки ──
+  // ── Применение / метки ──────────────────────────────────────────────────
+  // Метки выводятся по РЕАЛЬНОЙ номенклатуре марок (подтверждено заказчиком),
+  // а не по случайным признакам. Имена кириллические, поэтому \b с кириллицей
+  // ненадёжен — для «границы слова» используем пробел/начало строки в `padded`.
   const tags = new Set();
+  const padded = ' ' + low + ' ';
+
+  // 1) Сквозные свойства (добавляются к любой марке, если есть в названии)
   if (low.includes('кщс')) tags.add('acid-alkali');
-  if (/\bнг\b/i.test(name) || low.includes(' нг ') || low.endsWith(' нг')) tags.add('non-flammable');
-  if (/politex l\b/i.test(name) || low.includes('морозост')) tags.add('frost-resistant');
+  if (/\bнг\b/i.test(name) || /\bнгвм\b/i.test(name) || low.includes(' нг') || low.endsWith(' нг')) tags.add('non-flammable');
   if (low.includes('прозрач')) tags.add('transparent');
+  if (low.includes('морозо')) tags.add('frost-resistant');
 
-  // По сериям: O-plex/PLP/PL — оболочка; Iplex/Teplast/Politex базовые — изоляция
-  if (/o-?plex/i.test(name) || /\bplp\b/i.test(name) || /\bpl\b/i.test(name)) tags.add('cable-sheath');
-  if (/iplex|teplast|teplex|politex/i.test(name)) tags.add('cable-insulation');
+  // 2) Кабельные марки
+  //    И — изоляция; О/ОМ — оболочка (+изоляция, по решению заказчика; «М» → морозостойкое)
+  if (/(^|\s)и-?\d/.test(padded)) tags.add('cable-insulation');               // И-40-13, И4512
+  if (/(^|\s)ом[\s-]?\d/.test(padded)) {                                       // ОМ-40, ОМ 40, ОМ-40Н
+    tags.add('cable-sheath');
+    tags.add('cable-insulation');
+    tags.add('frost-resistant');
+  }
+  if (/(^|\s)о-\d/.test(padded)) tags.add('cable-sheath');                     // О-40 (без М)
+  if (/iplex/i.test(name)) tags.add('cable-insulation');
+  if (/\bo-?plex/i.test(name)) tags.add('cable-sheath');  // \b — чтобы не цеплять «TermoPlex»
+  if (/teplast/i.test(name)) tags.add('cable-insulation');
 
-  // Высокие индексы (120М/150М/160М) — литьё/профиль
+  // 3) Обувь: ПЛ-1/2/8/9, ПЛ-Ш, а также ПЛП и латинское PLP (низ обуви, подошвы)
+  if (/(^|\s)пл-?\d/.test(padded) || /(^|\s)пл-ш/.test(padded)) tags.add('footwear');
+  if (/(^|\s)плп/.test(padded) || /plp/i.test(name)) tags.add('footwear');
+
+  // 4) Шланги и трубки: ПЛШ (прозрачные → ещё медицина); ПМТ — медицинские трубки
+  if (/(^|\s)плш/.test(padded)) {
+    tags.add('hoses');
+    if (low.includes('прозрач')) tags.add('medical');
+  }
+  if (/(^|\s)пмт/.test(padded)) {
+    tags.add('medical');
+    tags.add('hoses');
+  }
+
+  // 5) Профиль: ПГ-88…98 (жёсткие погонажные)
+  if (/(^|\s)пг-?\d/.test(padded)) tags.add('profiles');
+
+  // 6) Натяжные потолки: ПНП
+  if (/(^|\s)пнп/.test(padded)) tags.add('stretch-ceiling');
+
+  // 7) Пониженной пожароопасности: ПЛС (в данных опечатка вместо ППС) / ППС
+  if (/(^|\s)пп?лс/.test(padded) || /(^|\s)ппс/.test(padded)) tags.add('non-flammable');
+
+  // 8) Пищевой пластикат: FHP
+  if (/fhp/i.test(name)) tags.add('food-grade');
+
+  // 9) Широкого назначения: Teplex / Politex / ТЭП (автопром, обувь, рукоятки и т.п.)
+  //    По данным заказчика это, по сути, одно семейство с широким применением.
+  if (/teplex|politex/i.test(name) || /(^|\s)тэп/.test(padded)) {
+    tags.add('general');
+    tags.add('injection');
+    tags.add('footwear');
+  }
+
+  // Высокие индексы (120М/150М/160М/220М) — жёсткие марки под профиль/литьё
   const grade = name.match(/\b(\d{2,3})\s*М/i);
+  const sn0 = name.match(/\b(5\d|6\d|7\d)\b/);                                 // для расчёта твёрдости ниже
+  const sn = sn0 ? parseInt(sn0[1], 10) : null;
   if (grade && parseInt(grade[1], 10) >= 100) {
     tags.add('injection');
     tags.add('profiles');
   }
 
-  // Мягкие марки (50–55) — обувь и шланги (демонстрация меток применения)
-  const seriesNum = name.match(/\b(5\d|6\d|7\d)\b/);
-  const sn = seriesNum ? parseInt(seriesNum[1], 10) : null;
-  if (sn !== null && sn <= 55) {
-    tags.add('footwear');
-    tags.add('hoses');
-  }
-  if (sn !== null && sn >= 50 && sn <= 60) tags.add('profiles');
-
-  // Прозрачные/полупрозрачные — частый материал для медицинских трубок
-  if (low.includes('прозрач')) {
-    tags.add('medical');
-    tags.add('hoses');
-  }
-
   if (tags.size === 0) tags.add('general');
-  if (tags.size === 1 && tags.has('general')) tags.add('cable-insulation');
 
   // ── Технические характеристики (детерминированные, реалистичные) ──
   // Твёрдость по Шору А: морозостойкие и оболочечные мягче, профиль/литьё твёрже

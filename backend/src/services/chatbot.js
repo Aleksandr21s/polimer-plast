@@ -37,6 +37,8 @@ const KEYWORD_TO_TAG = [
   { tag: 'acid-alkali', words: ['кислот', 'щелоч', 'кщс', 'агрессив', 'хими', 'реагент'] },
   { tag: 'transparent', words: ['прозрач', 'полупрозрач'] },
   { tag: 'injection', words: ['литье', 'литьем', 'инжекц', 'литьев'] },
+  { tag: 'stretch-ceiling', words: ['натяжн', 'потолок', 'потолк'] },
+  { tag: 'food-grade', words: ['пищев', 'пищеп', 'продукт питан', 'контакт с пищ', 'для еды', 'пищ контакт'] },
 ];
 
 // ── База знаний. kind: glossary (определения) | faq (темы) | social (привет/спасибо) ──
@@ -251,6 +253,52 @@ function serializeRecs(products) {
 
 const RECS_INCLUDE = { tags: true, prices: { where: { isCurrent: true }, take: 1 } };
 
+// «Базовая марка» — название без цвета/RAL/фасовки, чтобы в выдаче не шли подряд
+// цветовые варианты одной марки (ПЛ-1 бежевый / белый / чёрный → одна «ПЛ-1»).
+const COLOR_STEMS = [
+  'полупроз', 'прозрач', 'белосне', 'натур', 'светло', 'темно', 'лимонно', 'без ',
+  'серо', 'сер', 'бел', 'бежев', 'черн', 'красн', 'син', 'голуб', 'зелен', 'желт',
+  'оранж', 'коричн', 'оливк', 'розов', 'св.сер',
+];
+function baseGrade(name) {
+  const low = name.toLowerCase().replace(/ё/g, 'е');
+  let cut = low.length;
+  const mark = (i) => { if (i > 0 && i < cut) cut = i; };
+  for (const w of COLOR_STEMS) mark(low.indexOf(w));
+  for (const w of [' ral', ' rall', ' рал', '(']) mark(low.indexOf(w));
+  const dm = low.match(/\b\d{4}\b/);            // 4-значные коды цвета/RAL (7046, 3020…)
+  if (dm) mark(low.indexOf(dm[0]));
+  let key = low.slice(0, cut).replace(/[\s,.-]+$/, '').trim();
+  // Схлопываем модификации одной марки: ПЛ-1/1 → ПЛ-1, ПЛ-1М/Н/Д → ПЛ-1, ОМ-40Н → ОМ-40
+  key = key.replace(/\/\d+$/, '').replace(/(\d)[a-zа-я]{1,2}$/, '$1').replace(/[\s.-]+$/, '');
+  return key;
+}
+
+// Ранжирование кандидатов по релевантности запросу. Ключевая идея: для конкретного
+// назначения выше идут СПЕЦИАЛИЗИРОВАННЫЕ под него марки (у которых эта метка —
+// основная), а широкие/общего назначения опускаются ниже. Детерминированно
+// (стабильная сортировка по id), чтобы для разных задач выдавались разные марки.
+function rankCandidates(products, tags, ch) {
+  const want = new Set(tags);
+  const scored = products.map((p) => {
+    const slugs = (p.tags || []).map((t) => t.slug);
+    let score = 0;
+    if (want.size) {
+      const matched = slugs.filter((s) => want.has(s)).length;
+      const specificity = slugs.length ? matched / slugs.length : 0; // насколько марка «заточена» под задачу
+      score += matched * 1000 + Math.round(specificity * 200);
+      if (slugs.includes('general')) score -= 60; // широкие — ниже специализированных
+      score -= slugs.length;                       // меньше «лишних» меток — выше
+    }
+    // близость к характеристикам (мороз/твёрдость) как вторичный сигнал
+    if (ch.shoreTarget != null && p.shoreHardnessA != null) score -= Math.abs(p.shoreHardnessA - ch.shoreTarget);
+    if ((ch.frost || ch.minColdC != null) && p.brittlenessTemp != null) score -= (p.brittlenessTemp + 50); // холоднее → выше
+    return { p, score };
+  });
+  scored.sort((a, b) => b.score - a.score || a.p.id - b.p.id);
+  return scored.map((x) => x.p);
+}
+
 async function recommendProducts(tags, ch, limit = 4) {
   const where = { isActive: true };
   if (tags.length) where.tags = { some: { slug: { in: tags } } };
@@ -261,22 +309,33 @@ async function recommendProducts(tags, ch, limit = 4) {
   if (ch.color) where.colorName = { contains: ch.color, mode: 'insensitive' };
   if (ch.ral) where.colorRal = { contains: ch.ral };
 
-  let products = await prisma.product.findMany({ where, include: RECS_INCLUDE, take: limit, orderBy: { id: 'asc' } });
+  // Берём всех подходящих кандидатов (каталог небольшой) и ранжируем в памяти.
+  let products = await prisma.product.findMany({ where, include: RECS_INCLUDE });
 
   // Если по строгим фильтрам пусто — ослабляем: сначала до меток, затем до характеристики
   if (products.length === 0 && tags.length) {
     products = await prisma.product.findMany({
       where: { isActive: true, tags: { some: { slug: { in: tags } } } },
-      include: RECS_INCLUDE, take: limit, orderBy: { id: 'asc' },
+      include: RECS_INCLUDE,
     });
   }
   if (products.length === 0 && (ch.frost || ch.minColdC != null)) {
     products = await prisma.product.findMany({
       where: { isActive: true, brittlenessTemp: { lte: ch.minColdC ?? -50 } },
-      include: RECS_INCLUDE, take: limit, orderBy: { brittlenessTemp: 'asc' },
+      include: RECS_INCLUDE,
     });
   }
-  return serializeRecs(products);
+  // Дедуп по базовой марке: показываем РАЗНЫЕ марки, а не цвета одной и той же.
+  const out = [];
+  const seen = new Set();
+  for (const p of rankCandidates(products, tags, ch)) {
+    const key = baseGrade(p.name);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(p);
+    if (out.length >= limit) break;
+  }
+  return serializeRecs(out);
 }
 
 // Варианты разделителя между буквами и цифрами марки. В БД встречается и дефис
@@ -352,6 +411,8 @@ function describeTags(tags) {
     'acid-alkali': 'агрессивных (кислото-щёлочных) сред',
     transparent: 'прозрачных изделий',
     injection: 'литья под давлением',
+    'stretch-ceiling': 'натяжных потолков',
+    'food-grade': 'пищевой промышленности (контакт с продуктами)',
   };
   return tags.map((t) => map[t] || 'вашей задачи').join(' / ');
 }

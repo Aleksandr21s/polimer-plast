@@ -39,7 +39,7 @@ const newT = reg.data.token;
 
 console.log('\n── КАТАЛОГ ──');
 const cat = await api('/catalog/products?pageSize=5');
-ok(cat.data.total === 158, `Всего марок: ${cat.data.total}`);
+ok(cat.data.total === 157, `Всего марок: ${cat.data.total}`); // 158 минус «Сопло эвольвентное» (не пластикат, скрыто)
 ok(cat.data.products[0].pricePerTon > 0, 'У товара есть цена');
 const filtered = await api('/catalog/products?tag=frost-resistant');
 ok(filtered.data.products.every((p) => p.tags.some((t) => t.slug === 'frost-resistant')), `Фильтр по метке: ${filtered.data.total} морозостойких`);
