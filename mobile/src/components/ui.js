@@ -1,11 +1,15 @@
 import { useState, useMemo } from 'react';
 import {
-  View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView,
+  View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView, useWindowDimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadow, statusColors } from '../theme';
 
 export function Screen({ children, scroll = true, style, refreshControl, contentStyle }) {
+  const { width } = useWindowDimensions();
+  // На широком вебе ограничиваем ширину контента по центру — иначе строки и
+  // кнопки растягиваются на весь экран. На мобильном/узком вебе — как было.
+  const body = width >= 1024 ? <View style={s.contentMax}>{children}</View> : children;
   if (scroll) {
     return (
       <ScrollView
@@ -14,11 +18,11 @@ export function Screen({ children, scroll = true, style, refreshControl, content
         keyboardShouldPersistTaps="handled"
         refreshControl={refreshControl}
       >
-        {children}
+        {body}
       </ScrollView>
     );
   }
-  return <View style={[s.screen, style]}>{children}</View>;
+  return <View style={[s.screen, style]}>{body}</View>;
 }
 
 export function Card({ children, style, onPress }) {
@@ -209,6 +213,7 @@ export function SectionTitle({ children, style }) {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  contentMax: { width: '100%', maxWidth: 820, alignSelf: 'center' },
   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing(4), marginBottom: spacing(3), borderWidth: 1, borderColor: colors.border },
   btn: { paddingVertical: spacing(3.5), paddingHorizontal: spacing(4), borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   btnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
