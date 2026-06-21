@@ -224,20 +224,17 @@ export default function CatalogScreen({ navigation, route }) {
         </Pressable>
       </View>
 
-      <View style={st.mobSearch}>
-        <Ionicons name="search" size={18} color={colors.textMuted} />
-        <TextInput value={q} onChangeText={setQ} placeholder="Поиск по каталогу" placeholderTextColor={colors.textMuted} style={st.mobSearchInput} />
-      </View>
-
-      <View style={st.mobControls}>
-        <Pressable style={st.mobCtrlBtn} onPress={() => setShowFilters(true)}>
-          <Ionicons name="options-outline" size={18} color={colors.text} />
-          <Text style={st.mobCtrlText}>Фильтры</Text>
-          {activeFilterCount ? <View style={st.ctrlBadge}><Text style={st.ctrlBadgeText}>{activeFilterCount}</Text></View> : null}
+      <View style={st.mobSearchRow}>
+        <View style={st.mobSearch}>
+          <Ionicons name="search" size={18} color={colors.textMuted} />
+          <TextInput value={q} onChangeText={setQ} placeholder="Поиск по каталогу" placeholderTextColor={colors.textMuted} style={st.mobSearchInput} />
+        </View>
+        <Pressable style={st.mobIconBtn} onPress={() => setShowFilters(true)}>
+          <Ionicons name="options-outline" size={20} color={colors.text} />
+          {activeFilterCount ? <View style={st.mobIconBadge}><Text style={st.ctrlBadgeText}>{activeFilterCount}</Text></View> : null}
         </Pressable>
-        <Pressable style={st.mobCtrlBtn} onPress={() => setShowSort(true)}>
-          <Ionicons name="swap-vertical" size={18} color={colors.text} />
-          <Text style={st.mobCtrlText}>{SORTS.find((s) => s.key === sort)?.label}</Text>
+        <Pressable style={st.mobIconBtn} onPress={() => setShowSort(true)}>
+          <Ionicons name="swap-vertical" size={20} color={colors.text} />
         </Pressable>
       </View>
 
@@ -388,19 +385,20 @@ function SortControl({ value, onChange, onOpenModal, isWeb }) {
   );
 }
 
-function Characteristics({ product, compact }) {
+function Characteristics({ product, layout }) {
+  const full = layout === 'rowFull';
   const c = [
     ['Шор A', product.shoreHardnessA ?? '—'],
-    ['Темп. хрупкости', product.brittlenessTemp != null ? `${product.brittlenessTemp}°C` : '—'],
+    [full ? 'Хрупкость' : 'Темп. хрупкости', product.brittlenessTemp != null ? `${product.brittlenessTemp}°C` : '—'],
     ['ПТР', product.meltFlowIndex ?? '—'],
     ['Плотность', product.density != null ? `${product.density} г/см³` : '—'],
   ];
   return (
-    <View style={st.charsRow}>
+    <View style={full ? st.charsRowFull : st.charsRow}>
       {c.map(([k, v]) => (
         <View key={k} style={st.charItem}>
-          <Text style={st.charKey}>{k}</Text>
-          <Text style={st.charVal}>{v}</Text>
+          <Text style={st.charKey} numberOfLines={1}>{k}</Text>
+          <Text style={st.charVal} numberOfLines={1}>{v}</Text>
         </View>
       ))}
     </View>
@@ -468,12 +466,12 @@ function ListCard({ product, qty, setQty, onAdd, onOpen, onSample, isWeb }) {
             </Pressable>
             <View style={st.inStock}><Ionicons name="checkmark-circle" size={13} color={colors.success} /><Text style={st.inStockText}>В наличии</Text></View>
           </View>
-          <Characteristics product={product} />
           {product.tags[0] ? (
-            <Badge text={product.tags[0].name} bg={(product.tags[0].color || colors.primary) + '22'} fg={product.tags[0].color || colors.primary} style={{ marginTop: spacing(2) }} />
+            <Badge text={product.tags[0].name} bg={(product.tags[0].color || colors.primary) + '22'} fg={product.tags[0].color || colors.primary} style={{ marginTop: spacing(2), alignSelf: 'flex-start' }} />
           ) : null}
         </View>
       </View>
+      <Characteristics product={product} layout="rowFull" />
       <View style={st.mDivider} />
       <View style={st.mBottom}>
         <View>
@@ -613,6 +611,7 @@ const st = StyleSheet.create({
   cardName: { fontSize: 14, fontWeight: '700', color: colors.text },
   cardArticle: { fontSize: 11, color: colors.primary, fontWeight: '600', marginTop: 1 },
   charsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing(3), marginTop: spacing(2) },
+  charsRowFull: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing(2), marginTop: spacing(3) },
   charItem: {},
   charKey: { fontSize: 10.5, color: colors.textMuted },
   charVal: { fontSize: 13, fontWeight: '600', color: colors.text },
@@ -665,8 +664,11 @@ const st = StyleSheet.create({
   mobCart: { padding: spacing(1) },
   mobCartBadge: { position: 'absolute', top: -2, right: -4, backgroundColor: colors.primary, minWidth: 16, height: 16, borderRadius: 8, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   mobCartBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  mobSearch: { flexDirection: 'row', alignItems: 'center', gap: spacing(2), backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginHorizontal: spacing(4), marginTop: spacing(3), paddingHorizontal: spacing(3.5), height: 44 },
+  mobSearchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing(2), paddingHorizontal: spacing(4), marginTop: spacing(3) },
+  mobSearch: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing(2), backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing(3.5), height: 44 },
   mobSearchInput: { flex: 1, fontSize: 15, color: colors.text, outlineStyle: 'none' },
+  mobIconBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: '#fff' },
+  mobIconBadge: { position: 'absolute', top: -5, right: -5, backgroundColor: colors.primary, minWidth: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
   mobControls: { flexDirection: 'row', gap: spacing(3), paddingHorizontal: spacing(4), paddingTop: spacing(3) },
   mobCtrlBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing(2), borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing(3.5), paddingVertical: spacing(2.5), backgroundColor: '#fff' },
   mobCtrlText: { fontSize: 13, fontWeight: '600', color: colors.text },
