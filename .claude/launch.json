@@ -9,6 +9,14 @@
       "autoPort": false
     },
     {
+      "name": "mobile-web-prod",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "mobile", "run", "web", "--", "--port", "8091"],
+      "port": 8091,
+      "autoPort": false,
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.b2b-polimer-plast.ru/api" }
+    },
+    {
       "name": "docs-static",
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "8099", "--directory", "docs"],

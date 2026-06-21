@@ -6,8 +6,10 @@ import { Platform } from 'react-native';
 if (Platform.OS === 'web' && typeof document !== 'undefined') {
   const style = document.createElement('style');
   style.textContent = [
-    'html, body { height: 100%; margin: 0; padding: 0; }',
-    '#root { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }',
+    'html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }',
+    // Фиксированная (не min-) высота: корень ровно по экрану, не «вырастает» вниз
+    // за край. Внутренний скролл (каталог и т.п.) остаётся у списков.
+    '#root { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }',
   ].join('\n');
   document.head.appendChild(style);
 }
