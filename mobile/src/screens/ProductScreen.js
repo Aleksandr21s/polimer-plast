@@ -237,6 +237,7 @@ export default function ProductScreen({ route, navigation }) {
           {orderCard}
           <View style={{ height: spacing(2) }} />
           {sampleCard}
+          <View style={{ height: spacing(3) }} />
           {description}
           {similarBlock}
         </View>

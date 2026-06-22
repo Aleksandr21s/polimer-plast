@@ -106,11 +106,14 @@ export default function OrderScreen({ route, navigation }) {
 
       {/* КП/счёт (PDF) — крупная кнопка открытия */}
       {hasOffer ? (
-        <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}>
-          <Text style={st.offerTitle}>📄 Коммерческое предложение готово</Text>
-          <Text style={st.offerSub}>{offerDoc.fileName}</Text>
-          <Button title="Открыть / скачать КП (PDF)" icon="download-outline" onPress={() => openDoc(offerDoc)} />
-        </Card>
+        <>
+          <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}>
+            <Text style={st.offerTitle}>📄 Коммерческое предложение готово</Text>
+            <Text style={st.offerSub}>{offerDoc.fileName}</Text>
+            <Button title="Открыть / скачать КП (PDF)" icon="download-outline" onPress={() => openDoc(offerDoc)} />
+          </Card>
+          <View style={{ height: spacing(3) }} />
+        </>
       ) : null}
 
       {/* Позиции */}
@@ -162,6 +165,7 @@ export default function OrderScreen({ route, navigation }) {
       </Card>
 
       {/* Отслеживание */}
+      <View style={{ height: spacing(3) }} />
       <Card>
         <SectionTitle>Отслеживание заказа</SectionTitle>
         {order.history.map((h, idx) => (
@@ -234,8 +238,8 @@ const st = StyleSheet.create({
   timerBox: { backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing(3), marginTop: spacing(3) },
   timerText: { color: colors.warning, fontWeight: '600', fontSize: 13 },
   cancel: { color: colors.danger, marginTop: spacing(2), fontWeight: '600' },
-  offerTitle: { fontSize: 16, fontWeight: '800', color: colors.primaryDark },
-  offerSub: { color: colors.textMuted, fontSize: 12, marginTop: spacing(1.5), marginBottom: spacing(3) },
+  offerTitle: { fontSize: 16, fontWeight: '800', color: colors.primaryDark, marginBottom: spacing(2) },
+  offerSub: { color: colors.textMuted, fontSize: 12, marginTop: spacing(2), marginBottom: spacing(4) },
   item: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing(2) },
   swatch: { width: 36, height: 36, borderRadius: 9, marginRight: spacing(3), borderWidth: 1, borderColor: colors.border },
   itemName: { fontWeight: '700', color: colors.text, fontSize: 14 },

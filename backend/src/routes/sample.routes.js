@@ -61,6 +61,17 @@ router.get('/', authenticate, asyncH(async (req, res) => {
   res.json(samples.map(serialize));
 }));
 
+// Одна заявка на образец (клиент — только свою, менеджер — любую)
+router.get('/:id', authenticate, asyncH(async (req, res) => {
+  const sample = await prisma.sampleRequest.findUnique({
+    where: { id: Number(req.params.id) },
+    include: { product: true, company: true, user: true },
+  });
+  if (!sample) throw new AppError(404, 'Заявка не найдена');
+  if (req.user.role !== 'MANAGER' && sample.userId !== req.user.id) throw new AppError(403, 'Нет доступа');
+  res.json(serialize(sample));
+}));
+
 // Обновление статуса заявки (менеджер)
 router.patch('/:id/status', authenticate, requireRole('MANAGER'), asyncH(async (req, res) => {
   const { status } = z.object({ status: z.enum(['NEW', 'APPROVED', 'SHIPPED', 'REJECTED']) }).parse(req.body);

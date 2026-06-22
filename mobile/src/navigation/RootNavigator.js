@@ -20,6 +20,7 @@ import ProductScreen from '../screens/ProductScreen';
 import CartScreen from '../screens/CartScreen';
 import OrdersScreen from '../screens/OrdersScreen';
 import OrderScreen from '../screens/OrderScreen';
+import SampleScreen from '../screens/SampleScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ComplaintScreen from '../screens/ComplaintScreen';
@@ -58,6 +59,7 @@ function OrdersStack() {
     <Stack.Navigator screenOptions={{ header: renderAppHeader }}>
       <Stack.Screen name="OrdersList" component={OrdersScreen} options={{ title: 'Заказы' }} />
       <Stack.Screen name="Order" component={OrderScreen} options={{ title: 'Заказ' }} />
+      <Stack.Screen name="Sample" component={SampleScreen} options={{ title: 'Заявка на образец' }} />
       <Stack.Screen name="Complaint" component={ComplaintScreen} options={{ title: 'Рекламация' }} />
     </Stack.Navigator>
   );

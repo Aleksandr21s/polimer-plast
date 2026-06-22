@@ -49,8 +49,9 @@ export default function LoginScreen({ navigation }) {
           </Pressable>
         </Card>
 
+        <View style={{ height: spacing(5) }} />
         <Card>
-          <Text style={st.demoTitle}>Демо-доступы (для защиты ВКР)</Text>
+          <Text style={st.demoTitle}>Демо-доступы</Text>
           {DEMO.map((d) => (
             <Pressable key={d.email} style={st.demoRow} onPress={() => { setEmail(d.email); setPassword(d.password); }}>
               <Text style={st.demoLabel}>{d.label}</Text>

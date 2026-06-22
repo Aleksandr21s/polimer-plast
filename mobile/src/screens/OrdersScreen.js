@@ -47,7 +47,7 @@ export default function OrdersScreen({ navigation }) {
           {samples.map((s) => {
             const c = SAMPLE_STATUS[s.status] || SAMPLE_STATUS.NEW;
             return (
-              <Card key={'s' + s.id}>
+              <Card key={'s' + s.id} onPress={() => navigation.navigate('Sample', { id: s.id })}>
                 <View style={st.headRow}>
                   <View style={st.sampleNameRow}>
                     <Ionicons name="flask-outline" size={16} color={colors.accent} />
@@ -55,10 +55,14 @@ export default function OrdersScreen({ navigation }) {
                   </View>
                   <Badge text={s.statusLabel} bg={c.bg} fg={c.fg} />
                 </View>
-                <Text style={st.meta}>Бесплатный образец · {s.weightKg} кг · {new Date(s.createdAt).toLocaleDateString('ru-RU')}</Text>
+                <View style={st.sampleFooter}>
+                  <Text style={st.meta}>Бесплатный образец · {s.weightKg} кг · {new Date(s.createdAt).toLocaleDateString('ru-RU')}</Text>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </View>
               </Card>
             );
           })}
+          <View style={{ height: spacing(4) }} />
         </>
       ) : null}
       <Text style={st.title}>{isManager ? 'Все заказы' : 'Мои заказы'}</Text>
@@ -105,6 +109,7 @@ const st = StyleSheet.create({
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing(2) },
   sampleNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing(2), flex: 1 },
   sampleName: { fontSize: 15, fontWeight: '700', color: colors.text, flexShrink: 1 },
+  sampleFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing(2) },
   number: { fontSize: 16, fontWeight: '800', color: colors.text },
   company: { color: colors.primary, fontWeight: '600', marginTop: spacing(1) },
   metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing(2) },
