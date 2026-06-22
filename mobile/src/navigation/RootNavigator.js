@@ -12,6 +12,7 @@ import { colors } from '../theme';
 import { Loader } from '../components/ui';
 import { TopBar } from './TopBar';
 import AppHeader from './AppHeader';
+import ScreenTransition from '../components/ScreenTransition';
 
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -37,37 +38,60 @@ const Tab = createBottomTabNavigator();
 // хуков — иначе его условный рендер ломает порядок хуков NativeStackView (пустой экран).
 const renderAppHeader = (props) => <AppHeader {...props} />;
 
+// Переходы между экранами стека: на телефоне это нативный слайд; на react-native-web
+// опция `animation` у native-stack не работает (помечена iOS/Android-only) — там переход
+// мгновенный, и это ожидаемо (см. CLAUDE.md, капризы RN-web).
+const stackScreenOpts = { header: renderAppHeader, animation: 'slide_from_right' };
+
+// Обёртка для «вложенных» экранов стека: плавное появление контента на вебе (на телефоне —
+// нативный slide, обёртка там no-op). Оборачиваем НЕ корневые экраны вкладок. Компоненты
+// создаём на уровне модуля (стабильный тип) — иначе при каждом рендере был бы remount.
+const withTransition = (Comp) => {
+  const Wrapped = (props) => (
+    <ScreenTransition>
+      <Comp {...props} />
+    </ScreenTransition>
+  );
+  return Wrapped;
+};
+const ProductT = withTransition(ProductScreen);
+const OrderT = withTransition(OrderScreen);
+const SampleT = withTransition(SampleScreen);
+const ComplaintT = withTransition(ComplaintScreen);
+const ManagerChatT = withTransition(ManagerChatScreen);
+
 const screenOpts = {
   headerStyle: { backgroundColor: colors.primaryDark },
   headerTintColor: '#fff',
   headerTitleStyle: { fontWeight: '700' },
+  animation: 'slide_from_right',
 };
 
 // Все стеки используют общий AppHeader (зелёная шапка с условной кнопкой «Назад»).
 // AppHeader сам скрывается на широком вебе (там «Назад» в TopBar).
 function CatalogStack() {
   return (
-    <Stack.Navigator screenOptions={{ header: renderAppHeader }}>
+    <Stack.Navigator screenOptions={stackScreenOpts}>
       <Stack.Screen name="Catalog" component={CatalogScreen} options={{ title: 'Каталог', headerShown: false }} />
-      <Stack.Screen name="Product" component={ProductScreen} options={{ title: 'Карточка продукции' }} />
+      <Stack.Screen name="Product" component={ProductT} options={{ title: 'Карточка продукции' }} />
     </Stack.Navigator>
   );
 }
 
 function OrdersStack() {
   return (
-    <Stack.Navigator screenOptions={{ header: renderAppHeader }}>
+    <Stack.Navigator screenOptions={stackScreenOpts}>
       <Stack.Screen name="OrdersList" component={OrdersScreen} options={{ title: 'Заказы' }} />
-      <Stack.Screen name="Order" component={OrderScreen} options={{ title: 'Заказ' }} />
-      <Stack.Screen name="Sample" component={SampleScreen} options={{ title: 'Заявка на образец' }} />
-      <Stack.Screen name="Complaint" component={ComplaintScreen} options={{ title: 'Рекламация' }} />
+      <Stack.Screen name="Order" component={OrderT} options={{ title: 'Заказ' }} />
+      <Stack.Screen name="Sample" component={SampleT} options={{ title: 'Заявка на образец' }} />
+      <Stack.Screen name="Complaint" component={ComplaintT} options={{ title: 'Рекламация' }} />
     </Stack.Navigator>
   );
 }
 
 function CartStack() {
   return (
-    <Stack.Navigator screenOptions={{ header: renderAppHeader }}>
+    <Stack.Navigator screenOptions={stackScreenOpts}>
       <Stack.Screen name="CartMain" component={CartScreen} options={{ title: 'Оформление заказа' }} />
     </Stack.Navigator>
   );
@@ -75,9 +99,9 @@ function CartStack() {
 
 function ManagerChatStack() {
   return (
-    <Stack.Navigator screenOptions={{ header: renderAppHeader }}>
+    <Stack.Navigator screenOptions={stackScreenOpts}>
       <Stack.Screen name="ChatInbox" component={ChatInboxScreen} options={{ title: 'Обращения' }} />
-      <Stack.Screen name="ChatSession" component={ManagerChatScreen} options={({ route }) => ({ title: route.params?.title || 'Диалог' })} />
+      <Stack.Screen name="ChatSession" component={ManagerChatT} options={({ route }) => ({ title: route.params?.title || 'Диалог' })} />
     </Stack.Navigator>
   );
 }
@@ -90,6 +114,9 @@ const tabBarOpts = (hide, insets) => {
   const bottom = insets?.bottom || 0;
   return {
     headerShown: false,
+    // Плавная смена разделов меню (и нижние вкладки на мобиле, и клики по TopBar на вебе —
+    // оба идут через bottom-tabs). 'fade' на обычном Animated → работает и на RN-web.
+    animation: 'fade',
     tabBarActiveTintColor: colors.primary,
     tabBarInactiveTintColor: colors.textMuted,
     tabBarStyle: hide ? { display: 'none' } : { height: 76 + bottom, paddingBottom: 12 + bottom, paddingTop: 8 },
