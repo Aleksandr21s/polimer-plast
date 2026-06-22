@@ -43,7 +43,9 @@ async function seedSellerCompany() {
 async function ensureUser({ email, password, firstName, lastName, middleName, position, role, companyId, phone }) {
   return prisma.user.upsert({
     where: { email },
-    update: {},
+    // Профильные поля обновляем при повторном seed (пароль/роль не трогаем),
+    // чтобы правки демо-данных (напр. ФИО) применялись без сброса базы.
+    update: { firstName, lastName, middleName, position, phone },
     create: { email, passwordHash: hash(password), firstName, lastName, middleName, position, role, companyId, phone },
   });
 }
@@ -139,7 +141,7 @@ async function main() {
   console.log('▶ Компания-продавец и менеджер…');
   const seller = await seedSellerCompany();
   await ensureUser({
-    email: 'manager@polymer-plast.ru', password: 'manager123', firstName: 'Дмитрий', lastName: 'Полупанов',
+    email: 'manager@polymer-plast.ru', password: 'manager123', firstName: 'Дмитрий', lastName: 'Лебедев',
     middleName: 'Сергеевич', position: 'Менеджер отдела продаж', role: 'MANAGER', companyId: seller.id, phone: '+7 (3473) 24-00-01',
   });
 

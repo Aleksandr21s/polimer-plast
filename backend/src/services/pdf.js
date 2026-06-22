@@ -95,10 +95,14 @@ export function generateOfferPdf(order) {
     doc.moveDown(0.4);
 
     // ── Итоги ──
+    // Без `continued`: рисуем подпись и сумму как два текста в фиксированных колонках
+    // на одной строке и вручную сдвигаем y — иначе строки наезжают друг на друга.
     const right = (label, val, bold = false) => {
-      doc.font(bold ? 'bold' : 'main').fontSize(9);
-      doc.text(label, 320, doc.y, { width: 150, align: 'right', continued: true });
-      doc.text('  ' + val, { width: 85, align: 'right' });
+      const y = doc.y;
+      doc.font(bold ? 'bold' : 'main').fontSize(bold ? 10 : 9);
+      doc.text(label, 270, y, { width: 205, align: 'right' });
+      doc.text(val, 480, y, { width: 75, align: 'right' });
+      doc.y = y + (bold ? 18 : 15);
     };
     right('Итого без скидки и НДС:', money(order.subtotal) + ' ₽');
     if (Number(order.discountPercent) > 0) {
