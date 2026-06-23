@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert, Image, ScrollView, useWindowDimensions, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
-import { Card, Button, TextField, Badge, Loader, formatMoney } from '../components/ui';
+import { Button, TextField, Badge, Loader, formatMoney } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { colors, spacing, radius, shadow } from '../theme';
 
@@ -76,7 +76,7 @@ export default function ProductScreen({ route, navigation }) {
     <Image source={{ uri: api.fileUrl(product.imageUrl) }} style={isWide ? st.mainImageWeb : st.mainImageMob} resizeMode="cover" />
   );
 
-  const titleBlock = (
+  const titleInner = (
     <View>
       <View style={st.articleBadge}><Text style={st.articleBadgeText}>арт. {product.article}</Text></View>
       <Text style={st.name}>{product.name}</Text>
@@ -93,17 +93,27 @@ export default function ProductScreen({ route, navigation }) {
     </View>
   );
 
-  const characteristics = <CharsTable product={product} />;
-
-  const description = (
-    <Card>
+  const descInner = (
+    <View>
       <Text style={st.sectionTitle}>Описание</Text>
       <Text style={st.descText}>
         {product.description?.trim()
           ? product.description
           : `Поливинилхлоридный пластикат «${product.name}». Применение: ${product.tags.map((t) => t.name).join(', ') || 'общего назначения'}. Поставляется в гранулах, соответствует требованиям ГОСТ. Доступны бесплатные образцы для тестирования.`}
       </Text>
-    </Card>
+    </View>
+  );
+
+  // Единый белый блок: название + характеристики + описание; секции разделены тонкой линией,
+  // но визуально это одна карточка (по просьбе — «как один белый», без 3 отдельных плашек).
+  const mergedBlock = (
+    <View style={[st.panel, isWide && st.grow]}>
+      {titleInner}
+      <View style={st.innerDivider} />
+      <CharsTable product={product} />
+      <View style={st.innerDivider} />
+      {descInner}
+    </View>
   );
 
   const infoCards = (
@@ -115,7 +125,7 @@ export default function ProductScreen({ route, navigation }) {
   );
 
   const orderCard = (
-    <Card>
+    <View style={st.panel}>
       <Text style={st.sectionTitle}>Добавить в заказ</Text>
       <TextField label="Объём, кг" value={weight} onChangeText={setWeight} keyboardType="numeric" />
       <View style={st.totalRow}>
@@ -127,7 +137,7 @@ export default function ProductScreen({ route, navigation }) {
       </View>
       <Button title="Добавить в заказ" icon="cart-outline" onPress={addToOrder} />
       <Button title="Запросить счёт" variant="outline" icon="document-text-outline" style={{ marginTop: spacing(2) }} onPress={requestInvoice} />
-    </Card>
+    </View>
   );
 
   const sampleForm = (
@@ -146,18 +156,18 @@ export default function ProductScreen({ route, navigation }) {
   );
 
   const sampleCard = isWide ? (
-    <Card style={st.sampleCard}>
+    <View style={[st.panel, st.grow]}>
       <Text style={st.sectionTitle}>Бесплатный образец</Text>
       {sampleForm}
-    </Card>
+    </View>
   ) : (
-    <Card style={st.sampleCard}>
+    <View style={st.panel}>
       <Pressable style={st.sampleHead} onPress={() => setSampleOpen((o) => !o)}>
         <Text style={st.sectionTitle}>Бесплатный образец</Text>
         <Ionicons name={sampleOpen ? 'chevron-up' : 'chevron-down'} size={20} color={colors.primary} />
       </Pressable>
       {sampleOpen ? sampleForm : <Text style={[st.sampleHint, { marginBottom: 0 }]}>Закажите пробную партию для тестирования материала.</Text>}
-    </Card>
+    </View>
   );
 
   const similarBlock = similar.length ? (
@@ -168,7 +178,7 @@ export default function ProductScreen({ route, navigation }) {
       </View>
       <View style={st.similarGrid}>
         {similar.map((p) => (
-          <View key={p.id} style={[st.similarCard, shadow, { width: isWide ? 224 : '47%' }]}>
+          <View key={p.id} style={[st.similarCard, { width: isWide ? 224 : '47%' }]}>
             <Pressable onPress={() => navigation.push('Product', { id: p.id })}>
               <Image source={{ uri: api.fileUrl(p.imageUrl) }} style={st.similarImg} resizeMode="cover" />
               <Text style={st.similarName} numberOfLines={2}>{p.name}</Text>
@@ -207,9 +217,7 @@ export default function ProductScreen({ route, navigation }) {
                 {infoCards}
               </View>
               <View style={st.colMid}>
-                {titleBlock}
-                {characteristics}
-                {description}
+                {mergedBlock}
               </View>
               <View style={st.colRight}>
                 {orderCard}
@@ -230,15 +238,14 @@ export default function ProductScreen({ route, navigation }) {
       <ScrollView contentContainerStyle={{ paddingBottom: 96 }}>
         {photo}
         <View style={{ padding: spacing(4) }}>
-          {titleBlock}
+          {mergedBlock}
           <View style={{ height: spacing(3) }} />
-          {characteristics}
           {infoCards}
+          <View style={{ height: spacing(3) }} />
           {orderCard}
-          <View style={{ height: spacing(2) }} />
+          <View style={{ height: spacing(3) }} />
           {sampleCard}
           <View style={{ height: spacing(3) }} />
-          {description}
           {similarBlock}
         </View>
       </ScrollView>
@@ -268,7 +275,7 @@ function CharsTable({ product }) {
     ['Единица измерения', product.unit],
   ];
   return (
-    <Card>
+    <View>
       <Text style={st.sectionTitle}>Характеристики</Text>
       {rows.map(([k, v], i) => (
         <View key={k} style={[st.charRow, i < rows.length - 1 && st.charDivider]}>
@@ -276,7 +283,7 @@ function CharsTable({ product }) {
           <Text style={st.charVal}>{v}</Text>
         </View>
       ))}
-    </Card>
+    </View>
   );
 }
 
@@ -294,12 +301,23 @@ function InfoCard({ icon, title, sub }) {
 
 const st = StyleSheet.create({
   container: { width: '100%', maxWidth: 1600, alignSelf: 'center' },
-  webRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  // alignItems:'stretch' — колонки тянутся до общей высоты (низ всех трёх совпадает); самый
+  // высокий — левый (фото + преимущества), под него подтягиваются центр и правая колонка.
+  webRow: { flexDirection: 'row', alignItems: 'stretch' },
+  grow: { flex: 1 },
   colLeft: { width: 420 },
-  colMid: { flex: 1, minWidth: 0, gap: spacing(3), marginLeft: spacing(8) },
-  colRight: { width: 360, gap: spacing(3), marginLeft: spacing(30) },
+  colMid: { flex: 1, minWidth: 0, marginLeft: spacing(8) },
+  colRight: { width: 360, gap: spacing(3), marginLeft: spacing(3) },
   mainImageWeb: { width: '100%', aspectRatio: 1, borderRadius: radius.lg, backgroundColor: '#eef1ee', borderWidth: 1, borderColor: colors.border },
   mainImageMob: { width: '100%', aspectRatio: 1, backgroundColor: '#eef1ee' },
+
+  // Белая панель-«окно» под контентом. Статичный объект-стиль (а НЕ функция, как у компонента
+  // Card) — иначе на react-native-web View игнорирует функцию-стиль и фон/граница пропадают,
+  // секции «висят» прямо на сером фоне. Без тени (по просьбе). Зазоры между панелями задают
+  // `gap` колонки colRight (веб) и явные разделители-View (моб) — margin у View на RN-web не доходит.
+  panel: { backgroundColor: colors.card, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing(4) },
+  // Тонкая линия между секциями внутри объединённого блока (название · характеристики · описание).
+  innerDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing(4) },
 
   // заголовок/цена
   articleBadge: { alignSelf: 'flex-start', backgroundColor: colors.bg, borderRadius: radius.pill, paddingHorizontal: spacing(3), paddingVertical: spacing(1) },
@@ -335,8 +353,6 @@ const st = StyleSheet.create({
   totalLabel: { fontSize: 15, fontWeight: '700', color: colors.text },
   totalValue: { fontSize: 20, fontWeight: '800', color: colors.text },
 
-  // образец
-  sampleCard: { backgroundColor: colors.accentSoft, borderColor: colors.accent + '55' },
   sampleHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   sampleHint: { color: colors.textMuted, fontSize: 13, marginBottom: spacing(3) },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing(2) },

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { api } from '../api/client';
-import { Screen, Card, Button, TextField, AutocompleteField, Row, Divider, SectionTitle, EmptyState, formatMoney } from '../components/ui';
+import { Screen, Surface, Button, TextField, AutocompleteField, Row, Divider, SectionTitle, EmptyState, formatMoney } from '../components/ui';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { REGIONS, CITIES } from '../data/geo';
@@ -58,48 +58,49 @@ export default function CartScreen({ navigation }) {
     <Screen>
       <SectionTitle>Оформление заказа</SectionTitle>
 
-      {items.map((i) => (
-        <Card key={i.productId}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={[st.swatch, { backgroundColor: i.colorHex || '#ccc' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={st.name}>{i.name}</Text>
-              <Text style={st.price}>{formatMoney(i.pricePerTon)} ₽/т</Text>
+      <Surface>
+        {items.map((i) => (
+          <View key={i.productId}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[st.swatch, { backgroundColor: i.colorHex || '#ccc' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={st.name}>{i.name}</Text>
+                <Text style={st.price}>{formatMoney(i.pricePerTon)} ₽/т</Text>
+              </View>
+              <Pressable onPress={() => removeItem(i.productId)} hitSlop={10}><Text style={st.remove}>✕</Text></Pressable>
             </View>
-            <Pressable onPress={() => removeItem(i.productId)} hitSlop={10}><Text style={st.remove}>✕</Text></Pressable>
-          </View>
-          <View style={st.qtyRow}>
-            <TextField label="Объём, кг" value={String(i.weightKg)} keyboardType="numeric" style={{ width: 140 }}
-              onChangeText={(v) => updateWeight(i.productId, Number(String(v).replace(',', '.')) || 0)} />
-            <View style={{ alignItems: 'flex-end', flex: 1 }}>
-              <Text style={st.lineLabel}>Сумма позиции</Text>
-              <Text style={st.lineTotal}>{formatMoney((i.weightKg / 1000) * i.pricePerTon)} ₽</Text>
+            <View style={st.qtyRow}>
+              <TextField label="Объём, кг" value={String(i.weightKg)} keyboardType="numeric" style={{ width: 140 }}
+                onChangeText={(v) => updateWeight(i.productId, Number(String(v).replace(',', '.')) || 0)} />
+              <View style={{ alignItems: 'flex-end', flex: 1 }}>
+                <Text style={st.lineLabel}>Сумма позиции</Text>
+                <Text style={st.lineTotal}>{formatMoney((i.weightKg / 1000) * i.pricePerTon)} ₽</Text>
+              </View>
             </View>
           </View>
-        </Card>
-      ))}
+        ))}
 
-      {/* Обёртка с zIndex поднимает карточку (и выпадашки автоподстановки) над блоком «Итого».
-          Обычный View, а не Card — у Card функциональный style, zIndex до него не доходит. */}
-      <View style={{ zIndex: 20 }}>
-        <Card>
+        {/* Доставка — выпадашки региона/города перекрывают «Итого» ниже за счёт убывающего
+            zIndex секций Surface (см. подводный камень про zIndex на RN-web). */}
+        <View>
           <SectionTitle>Доставка</SectionTitle>
           <AutocompleteField label="Регион *" value={region} onChangeText={setRegion} placeholder="Начните вводить регион…" options={REGIONS} />
           <AutocompleteField label="Город" value={city} onChangeText={setCity} placeholder="Начните вводить город…" options={CITIES} />
           <TextField label="Комментарий" value={comment} onChangeText={setComment} multiline placeholder="Доп. условия поставки" />
-        </Card>
-      </View>
+        </View>
 
-      <Card>
-        <SectionTitle>Итого</SectionTitle>
-        <Row label={`Объём (${items.length} поз.)`} value={`${(totalWeightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т`} />
-        <Row label="Сумма без скидки" value={`${formatMoney(subtotal)} ₽`} />
-        {discountPercent > 0 ? <Row label={`Скидка по лояльности (${discountPercent}%)`} value={`−${formatMoney(discountAmount)} ₽`} valueStyle={{ color: colors.success }} /> : null}
-        <Row label="НДС 22%" value={`${formatMoney(vat)} ₽`} />
-        <Divider />
-        <Row label="К оплате" value={`${formatMoney(total)} ₽`} bold />
-      </Card>
+        <View>
+          <SectionTitle>Итого</SectionTitle>
+          <Row label={`Объём (${items.length} поз.)`} value={`${(totalWeightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т`} />
+          <Row label="Сумма без скидки" value={`${formatMoney(subtotal)} ₽`} />
+          {discountPercent > 0 ? <Row label={`Скидка по лояльности (${discountPercent}%)`} value={`−${formatMoney(discountAmount)} ₽`} valueStyle={{ color: colors.success }} /> : null}
+          <Row label="НДС 22%" value={`${formatMoney(vat)} ₽`} />
+          <Divider />
+          <Row label="К оплате" value={`${formatMoney(total)} ₽`} bold />
+        </View>
+      </Surface>
 
+      <View style={{ height: spacing(3) }} />
       <Button title="Сформировать КП / счёт (PDF)" icon="document-text-outline" onPress={submit} loading={loading} />
       <Button title="Очистить" variant="ghost" onPress={clear} style={{ marginTop: spacing(2) }} />
     </Screen>

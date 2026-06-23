@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet } from 'react-native';
 import { api } from '../api/client';
-import { Screen, Card, Button, Row, Divider, SectionTitle, Badge, Loader } from '../components/ui';
+import { Screen, Surface, Button, Row, Divider, SectionTitle, Badge, Loader } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, radius } from '../theme';
 
@@ -26,51 +26,54 @@ export default function ProfileScreen() {
 
   return (
     <Screen>
-      <Card>
-        <View style={st.avatarRow}>
-          <View style={st.avatar}><Text style={st.avatarText}>{(user.firstName?.[0] || '') + (user.lastName?.[0] || '')}</Text></View>
-          <View style={{ flex: 1 }}>
-            <Text style={st.name}>{user.lastName} {user.firstName} {user.middleName || ''}</Text>
-            <Text style={st.position}>{user.position || (isManager ? 'Менеджер' : 'Сотрудник')}</Text>
-            <Badge text={isManager ? 'Менеджер' : 'Клиент'} bg={isManager ? colors.accent + '20' : colors.primarySoft} fg={isManager ? colors.accent : colors.primary} style={{ marginTop: spacing(2) }} />
+      <Surface>
+        <View>
+          <View style={st.avatarRow}>
+            <View style={st.avatar}><Text style={st.avatarText}>{(user.firstName?.[0] || '') + (user.lastName?.[0] || '')}</Text></View>
+            <View style={{ flex: 1 }}>
+              <Text style={st.name}>{user.lastName} {user.firstName} {user.middleName || ''}</Text>
+              <Text style={st.position}>{user.position || (isManager ? 'Менеджер' : 'Сотрудник')}</Text>
+              <Badge text={isManager ? 'Менеджер' : 'Клиент'} bg={isManager ? colors.accent + '20' : colors.primarySoft} fg={isManager ? colors.accent : colors.primary} style={{ marginTop: spacing(2) }} />
+            </View>
           </View>
-        </View>
-        <Divider />
-        <Row label="E-mail" value={user.email} />
-        {user.phone ? <Row label="Телефон" value={user.phone} /> : null}
-      </Card>
-
-      {!isManager && loyalty ? (
-        <Card>
-          <SectionTitle>Программа лояльности</SectionTitle>
-          <View style={st.discountBox}>
-            <Text style={st.discountValue}>{loyalty.currentDiscount}%</Text>
-            <Text style={st.discountLabel}>текущая скидка компании</Text>
-          </View>
-          <Text style={st.tons}>Закуплено за 2 года: <Text style={{ fontWeight: '800', color: colors.text }}>{loyalty.tons.toLocaleString('ru-RU')} т</Text></Text>
-          <View style={st.progressTrack}><View style={[st.progressFill, { width: `${progress * 100}%` }]} /></View>
-          {loyalty.nextTier ? (
-            <Text style={st.next}>До скидки {loyalty.nextTier.discountPercent}% осталось {loyalty.nextTier.tonsLeft.toLocaleString('ru-RU')} т</Text>
-          ) : <Text style={[st.next, { color: colors.success }]}>Достигнут максимальный уровень скидки 🎉</Text>}
           <Divider />
-          {loyalty.tiers.map((t) => (
-            <Row key={t.minTons} label={`от ${t.minTons} т`} value={`${t.discountPercent}%`} valueStyle={{ color: loyalty.currentDiscount >= t.discountPercent ? colors.success : colors.textMuted }} />
-          ))}
-        </Card>
-      ) : null}
+          <Row label="E-mail" value={user.email} />
+          {user.phone ? <Row label="Телефон" value={user.phone} /> : null}
+        </View>
 
-      {company ? (
-        <Card>
-          <SectionTitle>Реквизиты компании</SectionTitle>
-          <Text style={st.companyName}>{company.name}</Text>
-          <Badge text={company.orgForm === 'OOO' ? 'ООО' : 'ИП'} style={{ marginVertical: spacing(2) }} />
-          <Row label="ИНН" value={company.inn || '—'} />
-          {company.kpp ? <Row label="КПП" value={company.kpp} /> : null}
-          {company.ogrn ? <Row label="ОГРН" value={company.ogrn} /> : null}
-          {company.legalAddress ? <Row label="Юр. адрес" value={company.legalAddress} /> : null}
-        </Card>
-      ) : null}
+        {!isManager && loyalty ? (
+          <View>
+            <SectionTitle>Программа лояльности</SectionTitle>
+            <View style={st.discountBox}>
+              <Text style={st.discountValue}>{loyalty.currentDiscount}%</Text>
+              <Text style={st.discountLabel}>текущая скидка компании</Text>
+            </View>
+            <Text style={st.tons}>Закуплено за 2 года: <Text style={{ fontWeight: '800', color: colors.text }}>{loyalty.tons.toLocaleString('ru-RU')} т</Text></Text>
+            <View style={st.progressTrack}><View style={[st.progressFill, { width: `${progress * 100}%` }]} /></View>
+            {loyalty.nextTier ? (
+              <Text style={st.next}>До скидки {loyalty.nextTier.discountPercent}% осталось {loyalty.nextTier.tonsLeft.toLocaleString('ru-RU')} т</Text>
+            ) : <Text style={[st.next, { color: colors.success }]}>Достигнут максимальный уровень скидки 🎉</Text>}
+            <Divider />
+            {loyalty.tiers.map((t) => (
+              <Row key={t.minTons} label={`от ${t.minTons} т`} value={`${t.discountPercent}%`} valueStyle={{ color: loyalty.currentDiscount >= t.discountPercent ? colors.success : colors.textMuted }} />
+            ))}
+          </View>
+        ) : null}
 
+        {company ? (
+          <View>
+            <SectionTitle>Реквизиты компании</SectionTitle>
+            <Text style={st.companyName}>{company.name}</Text>
+            <Badge text={company.orgForm === 'OOO' ? 'ООО' : 'ИП'} style={{ marginVertical: spacing(2) }} />
+            <Row label="ИНН" value={company.inn || '—'} />
+            {company.kpp ? <Row label="КПП" value={company.kpp} /> : null}
+            {company.ogrn ? <Row label="ОГРН" value={company.ogrn} /> : null}
+            {company.legalAddress ? <Row label="Юр. адрес" value={company.legalAddress} /> : null}
+          </View>
+        ) : null}
+      </Surface>
+
+      <View style={{ height: spacing(3) }} />
       <Button title="Выйти" variant="danger" onPress={logout} />
       <Text style={st.footer}>ООО ТПК «Полимер-Пласт» · B2B-портал · 2026</Text>
     </Screen>

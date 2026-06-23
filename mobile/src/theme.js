@@ -11,6 +11,7 @@ export const colors = {
   text: '#1b2420',
   textMuted: '#6b7773',
   border: '#e2e8e4',
+  borderStrong: '#c2ccc5',   // более тёмная рамка для полей ввода/выбора (видимость на белом)
   success: '#1f8a3b',
   successSoft: '#e6f4ea',
   warning: '#9a6700',

@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, Pressable, Alert, Linking, Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { api } from '../api/client';
-import { Screen, Card, Button, StatusBadge, Row, Divider, SectionTitle, Loader, formatMoney } from '../components/ui';
+import { Screen, Surface, Button, StatusBadge, Row, Divider, SectionTitle, Loader, formatMoney } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { colors, spacing, radius } from '../theme';
 
@@ -85,105 +85,108 @@ export default function OrderScreen({ route, navigation }) {
 
   return (
     <Screen>
-      <Card>
-        <View style={st.headRow}>
-          <Text style={st.number}>№ {order.number}</Text>
-          <StatusBadge status={order.status} label={order.statusLabel} />
-        </View>
-        <Text style={st.meta}>от {new Date(order.createdAt).toLocaleDateString('ru-RU')}</Text>
-        {order.company ? <Text style={st.company}>{order.company.name}</Text> : null}
-        <Text style={st.delivery}>📍 {order.deliveryRegion}{order.deliveryCity ? ', ' + order.deliveryCity : ''}</Text>
-        {order.comment ? <Text style={st.comment}>«{order.comment}»</Text> : null}
-        {order.remainingHours != null ? (
-          <View style={[st.timerBox, order.remainingHours < 24 && { backgroundColor: colors.dangerSoft }]}>
-            <Text style={[st.timerText, order.remainingHours < 24 && { color: colors.danger }]}>
-              ⏳ Оплатить/подтвердить в течение {Math.floor(order.remainingHours)} ч, иначе автоотмена
-            </Text>
-          </View>
-        ) : null}
-        {order.status === 'CANCELLED' && order.cancelReason ? <Text style={st.cancel}>❌ {order.cancelReason}</Text> : null}
-      </Card>
-
-      {/* КП/счёт (PDF) — крупная кнопка открытия */}
+      {/* КП/счёт (PDF) — акцентный баннер над белым листом */}
       {hasOffer ? (
         <>
-          <Card style={{ backgroundColor: colors.primarySoft, borderColor: colors.primary }}>
+          <View style={st.offerCard}>
             <Text style={st.offerTitle}>📄 Коммерческое предложение готово</Text>
             <Text style={st.offerSub}>{offerDoc.fileName}</Text>
             <Button title="Открыть / скачать КП (PDF)" icon="download-outline" onPress={() => openDoc(offerDoc)} />
-          </Card>
+          </View>
           <View style={{ height: spacing(3) }} />
         </>
       ) : null}
 
-      {/* Позиции */}
-      <Card>
-        <SectionTitle>Состав заказа</SectionTitle>
-        {order.items.map((it) => (
-          <View key={it.id} style={st.item}>
-            <View style={[st.swatch, { backgroundColor: it.colorHex || '#ccc' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={st.itemName}>{it.name}</Text>
-              <Text style={st.itemMeta}>{(it.weightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т × {formatMoney(it.pricePerTon)} ₽/т</Text>
-            </View>
-            <Text style={st.itemSum}>{formatMoney(it.lineTotal)} ₽</Text>
+      <Surface>
+        {/* Шапка */}
+        <View>
+          <View style={st.headRow}>
+            <Text style={st.number}>№ {order.number}</Text>
+            <StatusBadge status={order.status} label={order.statusLabel} />
           </View>
-        ))}
-        <Divider />
-        <Row label="Объём" value={`${(order.totalWeightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т`} />
-        <Row label="Сумма без скидки" value={`${formatMoney(order.subtotal)} ₽`} />
-        {order.discountPercent > 0 ? <Row label={`Скидка (${order.discountPercent}%)`} value={`−${formatMoney(order.discountAmount)} ₽`} valueStyle={{ color: colors.success }} /> : null}
-        <Row label={`НДС ${order.vatRate}%`} value={`${formatMoney(order.vatAmount)} ₽`} />
-        <Row label="Итого к оплате" value={`${formatMoney(order.total)} ₽`} bold />
-      </Card>
-
-      {/* Документы */}
-      <Card>
-        <SectionTitle>Документы</SectionTitle>
-        {order.documents.length === 0 ? <Text style={st.empty}>Документов пока нет</Text> : null}
-        {order.documents.map((d) => (
-          <Pressable key={d.id} style={st.doc} onPress={() => openDoc(d)}>
-            <Text style={st.docIcon}>{(DOC_LABELS[d.type] || DOC_LABELS.OTHER).icon}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={st.docTitle}>{(DOC_LABELS[d.type] || DOC_LABELS.OTHER).t}</Text>
-              <Text style={st.docMeta}>{d.fileName}{d.uploadedBy ? ` · ${d.uploadedBy}` : ''}</Text>
+          <Text style={st.meta}>от {new Date(order.createdAt).toLocaleDateString('ru-RU')}</Text>
+          {order.company ? <Text style={st.company}>{order.company.name}</Text> : null}
+          <Text style={st.delivery}>📍 {order.deliveryRegion}{order.deliveryCity ? ', ' + order.deliveryCity : ''}</Text>
+          {order.comment ? <Text style={st.comment}>«{order.comment}»</Text> : null}
+          {order.remainingHours != null ? (
+            <View style={[st.timerBox, order.remainingHours < 24 && { backgroundColor: colors.dangerSoft }]}>
+              <Text style={[st.timerText, order.remainingHours < 24 && { color: colors.danger }]}>
+                ⏳ Оплатить/подтвердить в течение {Math.floor(order.remainingHours)} ч, иначе автоотмена
+              </Text>
             </View>
-            <Text style={st.docOpen}>Открыть ↗</Text>
-          </Pressable>
-        ))}
+          ) : null}
+          {order.status === 'CANCELLED' && order.cancelReason ? <Text style={st.cancel}>❌ {order.cancelReason}</Text> : null}
+        </View>
 
-        {/* Загрузка документов по ролям */}
-        {isManager ? (
-          <Button title="Загрузить счёт ТК за доставку" variant="outline" small icon="car-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('TRANSPORT_INVOICE')} />
-        ) : null}
-        {canClientPay ? (
-          <>
-            <Button title="Загрузить платёжку за товар" variant="outline" small icon="card-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('PAYMENT_GOODS')} />
-            <Button title="Загрузить платёжку за доставку" variant="outline" small icon="card-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('PAYMENT_DELIVERY')} />
-          </>
-        ) : null}
-      </Card>
+        {/* Позиции */}
+        <View>
+          <SectionTitle>Состав заказа</SectionTitle>
+          {order.items.map((it) => (
+            <View key={it.id} style={st.item}>
+              <View style={[st.swatch, { backgroundColor: it.colorHex || '#ccc' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={st.itemName}>{it.name}</Text>
+                <Text style={st.itemMeta}>{(it.weightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т × {formatMoney(it.pricePerTon)} ₽/т</Text>
+              </View>
+              <Text style={st.itemSum}>{formatMoney(it.lineTotal)} ₽</Text>
+            </View>
+          ))}
+          <Divider />
+          <Row label="Объём" value={`${(order.totalWeightKg / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 3 })} т`} />
+          <Row label="Сумма без скидки" value={`${formatMoney(order.subtotal)} ₽`} />
+          {order.discountPercent > 0 ? <Row label={`Скидка (${order.discountPercent}%)`} value={`−${formatMoney(order.discountAmount)} ₽`} valueStyle={{ color: colors.success }} /> : null}
+          <Row label={`НДС ${order.vatRate}%`} value={`${formatMoney(order.vatAmount)} ₽`} />
+          <Row label="Итого к оплате" value={`${formatMoney(order.total)} ₽`} bold />
+        </View>
 
-      {/* Отслеживание */}
-      <View style={{ height: spacing(3) }} />
-      <Card>
-        <SectionTitle>Отслеживание заказа</SectionTitle>
-        {order.history.map((h, idx) => (
-          <View key={idx} style={st.tl}>
-            <View style={st.tlDot}>
-              <View style={[st.dot, { backgroundColor: idx === order.history.length - 1 ? colors.primary : colors.border }]} />
-              {idx < order.history.length - 1 ? <View style={st.line} /> : null}
+        {/* Документы */}
+        <View>
+          <SectionTitle>Документы</SectionTitle>
+          {order.documents.length === 0 ? <Text style={st.empty}>Документов пока нет</Text> : null}
+          {order.documents.map((d) => (
+            <Pressable key={d.id} style={st.doc} onPress={() => openDoc(d)}>
+              <Text style={st.docIcon}>{(DOC_LABELS[d.type] || DOC_LABELS.OTHER).icon}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={st.docTitle}>{(DOC_LABELS[d.type] || DOC_LABELS.OTHER).t}</Text>
+                <Text style={st.docMeta}>{d.fileName}{d.uploadedBy ? ` · ${d.uploadedBy}` : ''}</Text>
+              </View>
+              <Text style={st.docOpen}>Открыть ↗</Text>
+            </Pressable>
+          ))}
+
+          {/* Загрузка документов по ролям */}
+          {isManager ? (
+            <Button title="Загрузить счёт ТК за доставку" variant="outline" small icon="car-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('TRANSPORT_INVOICE')} />
+          ) : null}
+          {canClientPay ? (
+            <>
+              <Button title="Загрузить платёжку за товар" variant="outline" small icon="card-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('PAYMENT_GOODS')} />
+              <Button title="Загрузить платёжку за доставку" variant="outline" small icon="card-outline" style={{ marginTop: spacing(2) }} onPress={() => uploadDoc('PAYMENT_DELIVERY')} />
+            </>
+          ) : null}
+        </View>
+
+        {/* Отслеживание */}
+        <View>
+          <SectionTitle>Отслеживание заказа</SectionTitle>
+          {order.history.map((h, idx) => (
+            <View key={idx} style={st.tl}>
+              <View style={st.tlDot}>
+                <View style={[st.dot, { backgroundColor: idx === order.history.length - 1 ? colors.primary : colors.border }]} />
+                {idx < order.history.length - 1 ? <View style={st.line} /> : null}
+              </View>
+              <View style={{ flex: 1, paddingBottom: spacing(3) }}>
+                <Text style={st.tlStatus}>{h.statusLabel}</Text>
+                {h.comment ? <Text style={st.tlComment}>{h.comment}</Text> : null}
+                <Text style={st.tlDate}>{new Date(h.createdAt).toLocaleString('ru-RU')}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, paddingBottom: spacing(3) }}>
-              <Text style={st.tlStatus}>{h.statusLabel}</Text>
-              {h.comment ? <Text style={st.tlComment}>{h.comment}</Text> : null}
-              <Text style={st.tlDate}>{new Date(h.createdAt).toLocaleString('ru-RU')}</Text>
-            </View>
-          </View>
-        ))}
-      </Card>
+          ))}
+        </View>
+      </Surface>
 
       {/* Действия */}
+      <View style={{ height: spacing(3) }} />
       <View style={{ gap: spacing(2) }}>
         {!hasOffer && !['CANCELLED', 'COMPLETED'].includes(order.status) ? (
           <Button title="Сформировать КП / счёт (PDF)" icon="document-text-outline" onPress={issueInvoice} loading={busy} />
@@ -238,6 +241,7 @@ const st = StyleSheet.create({
   timerBox: { backgroundColor: colors.warningSoft, borderRadius: radius.md, padding: spacing(3), marginTop: spacing(3) },
   timerText: { color: colors.warning, fontWeight: '600', fontSize: 13 },
   cancel: { color: colors.danger, marginTop: spacing(2), fontWeight: '600' },
+  offerCard: { backgroundColor: colors.primarySoft, borderColor: colors.primary, borderWidth: 1, borderRadius: radius.lg, padding: spacing(4) },
   offerTitle: { fontSize: 16, fontWeight: '800', color: colors.primaryDark, marginBottom: spacing(2) },
   offerSub: { color: colors.textMuted, fontSize: 12, marginTop: spacing(2), marginBottom: spacing(4) },
   item: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing(2) },

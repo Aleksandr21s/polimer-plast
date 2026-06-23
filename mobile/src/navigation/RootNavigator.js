@@ -29,6 +29,7 @@ import PricesScreen from '../screens/manager/PricesScreen';
 import SamplesScreen from '../screens/manager/SamplesScreen';
 import ChatInboxScreen from '../screens/manager/ChatInboxScreen';
 import ManagerChatScreen from '../screens/manager/ManagerChatScreen';
+import ManagerComplaintScreen from '../screens/manager/ManagerComplaintScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -59,6 +60,7 @@ const OrderT = withTransition(OrderScreen);
 const SampleT = withTransition(SampleScreen);
 const ComplaintT = withTransition(ComplaintScreen);
 const ManagerChatT = withTransition(ManagerChatScreen);
+const ManagerComplaintT = withTransition(ManagerComplaintScreen);
 
 const screenOpts = {
   headerStyle: { backgroundColor: colors.primaryDark },
@@ -102,6 +104,7 @@ function ManagerChatStack() {
     <Stack.Navigator screenOptions={stackScreenOpts}>
       <Stack.Screen name="ChatInbox" component={ChatInboxScreen} options={{ title: 'Обращения' }} />
       <Stack.Screen name="ChatSession" component={ManagerChatT} options={({ route }) => ({ title: route.params?.title || 'Диалог' })} />
+      <Stack.Screen name="ManagerComplaint" component={ManagerComplaintT} options={{ title: 'Рекламация' }} />
     </Stack.Navigator>
   );
 }

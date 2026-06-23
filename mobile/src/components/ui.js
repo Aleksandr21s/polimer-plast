@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { Children, useState, useMemo } from 'react';
 import {
   View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, ScrollView, useWindowDimensions,
 } from 'react-native';
@@ -31,6 +31,24 @@ export function Card({ children, style, onPress }) {
     <Comp onPress={onPress} style={({ pressed }) => [s.card, shadow, onPress && pressed && { opacity: 0.85 }, style]}>
       {children}
     </Comp>
+  );
+}
+
+// Единый белый «лист»: содержимое экрана на одном фоне, секции разделены тонкой линией.
+// Каждый прямой потомок = секция. В отличие от Card — статичный стиль (на react-native-web
+// функция-стиль Card отбрасывается, фон/паддинг пропадают). Секциям задаём убывающий zIndex,
+// чтобы выпадашки автоподстановки из верхних секций перекрывали нижние (подводный камень RN-web).
+export function Surface({ children, style }) {
+  const items = Children.toArray(children).filter(Boolean);
+  return (
+    <View style={[s.surface, style]}>
+      {items.map((child, i) => (
+        <View key={i} style={{ zIndex: items.length - i }}>
+          {i > 0 ? <View style={s.surfaceDivider} /> : null}
+          {child}
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -215,17 +233,21 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   contentMax: { width: '100%', maxWidth: 820, alignSelf: 'center' },
   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing(4), marginBottom: spacing(3), borderWidth: 1, borderColor: colors.border },
+  // Единый белый лист (Surface) — без тени, по образцу карточки товара. Зазор между листами
+  // на экранах задаём явными View-разделителями (margin у View на RN-web ненадёжен).
+  surface: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing(4), borderWidth: 1, borderColor: colors.border },
+  surfaceDivider: { height: 1, backgroundColor: colors.border, marginVertical: spacing(4) },
   btn: { paddingVertical: spacing(3.5), paddingHorizontal: spacing(4), borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   btnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
   btnSmall: { paddingVertical: spacing(2), paddingHorizontal: spacing(3) },
   btnText: { fontSize: 16, fontWeight: '700' },
   label: { fontSize: 13, fontWeight: '600', color: colors.text, marginBottom: spacing(1.5) },
-  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing(3.5), paddingVertical: spacing(3), fontSize: 16, color: colors.text },
+  input: { backgroundColor: '#fff', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.md, paddingHorizontal: spacing(3.5), paddingVertical: spacing(3), fontSize: 16, color: colors.text },
   acDropdown: { position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, marginTop: 4, overflow: 'hidden', zIndex: 50, ...shadow, elevation: 8 },
   acItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing(3.5), paddingVertical: spacing(3), borderBottomWidth: 1, borderBottomColor: colors.border },
   acText: { fontSize: 15, color: colors.text },
   errorText: { color: colors.danger, fontSize: 12, marginTop: spacing(1) },
-  stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, height: 44, backgroundColor: '#fff', overflow: 'hidden' },
+  stepper: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderStrong, borderRadius: radius.md, height: 44, backgroundColor: '#fff', overflow: 'hidden' },
   stepBtn: { width: 38, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch' },
   stepInput: { width: 48, textAlign: 'center', fontSize: 15, fontWeight: '600', color: colors.text, paddingVertical: 0 },
   stepSuffix: { color: colors.textMuted, fontSize: 13, paddingHorizontal: spacing(2) },

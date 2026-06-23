@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../api/client';
-import { Screen, Card, Row, Divider, SectionTitle, Loader, Badge } from '../components/ui';
+import { Screen, Surface, Row, Divider, SectionTitle, Loader, Badge } from '../components/ui';
 import { colors, spacing } from '../theme';
 
 const SAMPLE_STATUS = {
@@ -52,46 +52,46 @@ export default function SampleScreen({ route }) {
 
   return (
     <Screen>
-      <Card>
-        <View style={st.headRow}>
-          <View style={st.nameRow}>
-            <Ionicons name="flask-outline" size={18} color={colors.accent} />
-            <Text style={st.name}>{sample.product?.name}</Text>
+      <Surface>
+        <View>
+          <View style={st.headRow}>
+            <View style={st.nameRow}>
+              <Ionicons name="flask-outline" size={18} color={colors.accent} />
+              <Text style={st.name}>{sample.product?.name}</Text>
+            </View>
+            <Badge text={sample.statusLabel} bg={c.bg} fg={c.fg} />
           </View>
-          <Badge text={sample.statusLabel} bg={c.bg} fg={c.fg} />
+          <Text style={st.meta}>Заявка на бесплатный образец · от {new Date(sample.createdAt).toLocaleDateString('ru-RU')}</Text>
+          <Divider />
+          <Row label="Навеска образца" value={`${sample.weightKg} кг`} />
+          <Row label="Стоимость" value="Бесплатно" valueStyle={{ color: colors.success, fontWeight: '700' }} />
+          <Row label="Доставка" value={`${sample.region}${sample.city ? ', ' + sample.city : ''}`} />
+          {sample.comment ? <Row label="Комментарий" value={sample.comment} /> : null}
         </View>
-        <Text style={st.meta}>Заявка на бесплатный образец · от {new Date(sample.createdAt).toLocaleDateString('ru-RU')}</Text>
-        <Divider />
-        <Row label="Навеска образца" value={`${sample.weightKg} кг`} />
-        <Row label="Стоимость" value="Бесплатно" valueStyle={{ color: colors.success, fontWeight: '700' }} />
-        <Row label="Доставка" value={`${sample.region}${sample.city ? ', ' + sample.city : ''}`} />
-        {sample.comment ? <Row label="Комментарий" value={sample.comment} /> : null}
-      </Card>
 
-      <View style={{ height: spacing(3) }} />
-
-      <Card>
-        <SectionTitle>Отслеживание</SectionTitle>
-        {steps.map((s, idx) => (
-          <View key={idx} style={st.tl}>
-            <View style={st.tlDot}>
-              <View
-                style={[
-                  st.dot,
-                  { backgroundColor: s.done ? (s.danger ? colors.danger : idx === lastDone ? colors.primary : colors.success) : colors.border },
-                ]}
-              />
-              {idx < steps.length - 1 ? <View style={st.line} /> : null}
+        <View>
+          <SectionTitle>Отслеживание</SectionTitle>
+          {steps.map((s, idx) => (
+            <View key={idx} style={st.tl}>
+              <View style={st.tlDot}>
+                <View
+                  style={[
+                    st.dot,
+                    { backgroundColor: s.done ? (s.danger ? colors.danger : idx === lastDone ? colors.primary : colors.success) : colors.border },
+                  ]}
+                />
+                {idx < steps.length - 1 ? <View style={st.line} /> : null}
+              </View>
+              <View style={{ flex: 1, paddingBottom: spacing(3) }}>
+                <Text style={[st.tlStatus, !s.done && { color: colors.textMuted }]}>{s.label}</Text>
+                {s.comment ? <Text style={st.tlComment}>{s.comment}</Text> : null}
+                {s.date ? <Text style={st.tlDate}>{s.date}</Text> : null}
+              </View>
             </View>
-            <View style={{ flex: 1, paddingBottom: spacing(3) }}>
-              <Text style={[st.tlStatus, !s.done && { color: colors.textMuted }]}>{s.label}</Text>
-              {s.comment ? <Text style={st.tlComment}>{s.comment}</Text> : null}
-              {s.date ? <Text style={st.tlDate}>{s.date}</Text> : null}
-            </View>
-          </View>
-        ))}
-        <Text style={st.note}>Образцы доставляются транспортной компанией. Оплата не требуется.</Text>
-      </Card>
+          ))}
+          <Text style={st.note}>Образцы доставляются транспортной компанией. Оплата не требуется.</Text>
+        </View>
+      </Surface>
     </Screen>
   );
 }
